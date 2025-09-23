@@ -20,7 +20,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /var/www/demos.godigitalalchemy.com/html/illustration-workflow
+            cd /var/www/demos.godigitalalchemy.com/html/illustrata
             cd pdf-merge-api
             git pull origin main
             #npm install
