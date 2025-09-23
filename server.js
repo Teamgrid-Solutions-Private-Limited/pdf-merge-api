@@ -15,7 +15,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev")); 
 
 
-const DB = require("./db/conn");
+
 
 const indexRoutes = require("./routes/index");
 const pdfRoutes = require("./routes/pdfRoutes");
