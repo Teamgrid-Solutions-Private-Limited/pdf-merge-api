@@ -4,6 +4,6 @@ const PdfController = require("../controllers/pdfController");
 const protectedKey = require("../utils/protectedKey");
 
 
-router.post("/",PdfController.submitAndMergePDFs);
+router.post("/processRecords",PdfController.processRecords);
 
 module.exports = router;

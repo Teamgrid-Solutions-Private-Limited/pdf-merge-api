@@ -1,209 +1,129 @@
-// const axios = require("axios");
-// const { PDFDocument } = require("pdf-lib");
-
-// // Merge PDFs Controller
-// exports.mergePDFs = async (req, res) => {
-//   try {
-//     const { responseObject } = req.body;
-//     if (!responseObject)
-//       return res.status(400).json({ error: "responseObject required" });
-
-//     // Build pdfList from responseObject
-//     const pdfList = Object.keys(responseObject)
-//       .map((key) => {
-//         if (key.startsWith("ILLUSTRATION_")) {
-//           const page = key.replace("ILLUSTRATION_", "Pages ");
-//           const pageInfo = responseObject.pagecounts?.find(
-//             (p) => p.Page === page
-//           );
-//           const pageCount = pageInfo ? pageInfo.PageCount : 0;
-
-//           if (pageCount > 0) {
-//             return {
-//               PDFUrl: responseObject[key].PDFUrl,
-//               PageCount: pageCount,
-//             };
-//           }
-//         }
-//         return null;
-//       })
-//       .filter(Boolean);
-
-//     if (!pdfList.length)
-//       return res.status(400).json({ error: "No PDFs to merge" });
-
-//     // Download PDFs
-//     const pdfBuffers = await Promise.all(
-//       pdfList.map(async ({ PDFUrl }) => {
-//         const response = await axios.get(PDFUrl, {
-//           responseType: "arraybuffer",
-//         });
-
-//         if (response.status !== 200) {
-//           throw new Error(`Failed to fetch PDF from ${PDFUrl}`);
-//         }
-
-//         return Buffer.from(response.data);
-//       })
-//     );
-
-//     // Merge PDFs
-//     const mergedPdf = await PDFDocument.create();
-//     for (let i = 0; i < pdfList.length; i++) {
-//       const { PageCount } = pdfList[i];
-//       const pdfDoc = await PDFDocument.load(pdfBuffers[i]);
-//       const totalPages = pdfDoc.getPageCount();
-//       const pagesToCopy = Array.from(
-//         { length: Math.min(PageCount, totalPages) },
-//         (_, idx) => idx
-//       );
-//       const copiedPages = await mergedPdf.copyPages(pdfDoc, pagesToCopy);
-//       copiedPages.forEach((page) => mergedPdf.addPage(page));
-//     }
-
-//     const finalPdfBytes = await mergedPdf.save();
-
-//     // Generate dynamic filename
-//     const reportTitle = responseObject.reportTitle || "Illustration";
-//     const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-//     const fileName = `${reportTitle}_${timestamp}.pdf`;
-
-//     // Send PDF response
-//     res.setHeader("Content-Type", "application/pdf");
-//     res.setHeader("Content-Disposition", `attachment; filename=${fileName}`);
-//     res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
-
-//     console.log("File Name:", fileName);
-//     res.send(Buffer.from(finalPdfBytes));
-//     console.log("PDF sent successfully");
-//   } catch (err) {
-//     console.error("PDF merge failed:", err);
-//     res.status(500).json({ error: "Failed to generate merged PDF" });
-//   }
-// };
 const axios = require("axios");
 const { PDFDocument } = require("pdf-lib");
 
-// Submit and merge PDFs
-exports.submitAndMergePDFs = async (req, res) => {
+exports.processRecords = async (req, res) => {
   try {
-    const { annuiyInputData, request_meta } = req.body;
+    const { action, ...requestData } = req.body;
 
-    // Validate input
-    if (!annuiyInputData || !request_meta) {
-      return res.status(400).json({ error: "Input data required" });
+    if (!action) {
+      return res.status(400).json({ error: "Action parameter required" });
     }
 
-    // Determine internal API URL
-    let url;
-    if (annuiyInputData.Product === "Demo FIA") {
-      url = process.env.API_URL_FIA 
-    } else if (annuiyInputData.Product === "Demo MYGA") {
-      url = process.env.API_URL_MYGA 
-    }
+    if (action === 'submit') {
+      // Step 1: Submit and get responseObject
+      const { annuiyInputData, request_meta, url, headers } = requestData;
 
-    if (!url) {
-      console.error(
-        "Internal API URL is undefined. Product:",
-        annuiyInputData.Product
+      if (!annuiyInputData || !request_meta || !url) {
+        return res.status(400).json({ error: "Input data required" });
+      }
+
+      const apiResponse = await axios.post(
+        url,
+        { request_data: { inputs: annuiyInputData }, request_meta },
+        { headers }
       );
-      return res.status(500).json({ error: "Internal API URL is not defined" });
-    }
 
-    // Prepare headers
-    const headers = {
-      "Content-Type": "application/json",
-      "x-tenant-name": "life-innovators",
-      "x-synthetic-key": "da13cd4d-23ad-4987-8fac-037a3530d338",
-    };
+      const responseOutput = apiResponse.data;
 
-    // Call internal API
-    const apiResponse = await axios.post(
-      url,
-      { request_data: { inputs: annuiyInputData }, request_meta },
-      { headers }
-    );
+      if (
+        !responseOutput.status ||
+        responseOutput.status !== "Success" ||
+        !responseOutput.response_data?.outputs?.Illustration?.length
+      ) {
+        return res
+          .status(400)
+          .json({ error: "Internal API returned no valid data" });
+      }
 
-    const responseOutput = apiResponse.data;
+      // ✅ Send JSON only
+      res.json(responseOutput);
 
-    if (
-      !responseOutput.status ||
-      responseOutput.status !== "Success" ||
-      !responseOutput.response_data ||
-      !responseOutput.response_data.outputs ||
-      !responseOutput.response_data.outputs.Illustration ||
-      responseOutput.response_data.outputs.Illustration.length === 0
-    ) {
-      return res
-        .status(400)
-        .json({ error: "Internal API returned no valid data" });
-    }
+    } else if (action === 'print') {
+      // Step 2: Merge PDFs (called only when user clicks "Print Records")
+      const { responseObject } = requestData;
 
-    const responseObject = responseOutput.response_data.outputs;
+      if (!responseObject) {
+        return res.status(400).json({ error: "responseObject required" });
+      }
 
-    // Build list of PDFs to merge
-    const pdfList = Object.keys(responseObject)
-      .map((key) => {
-        if (key.startsWith("ILLUSTRATION_")) {
-          const page = key.replace("ILLUSTRATION_", "Pages ");
-          const pageInfo = responseObject.pagecounts?.find(
-            (p) => p.Page === page
-          );
-          const pageCount = pageInfo ? pageInfo.PageCount : 0;
+      // Helper function to get page count (moved from frontend)
+      const getPageCount = (key) => {
+        const page = key.replace('ILLUSTRATION_', 'Pages ');
+        const pageInfo = responseObject.pagecounts?.find(p => p.Page === page);
+        return pageInfo ? pageInfo.PageCount : 0;
+      };
 
+      // Extract PDF data exactly like frontend logic
+      const pdfData = Object.keys(responseObject).map((key) => {
+        if (key.startsWith('ILLUSTRATION_')) {
+          const pageCount = getPageCount(key);
           if (pageCount > 0) {
-            return { PDFUrl: responseObject[key].PDFUrl, PageCount: pageCount };
+            return {
+              PDFUrl: responseObject[key].PDFUrl,
+              PDFName: responseObject[key].PDFName,
+              PageCount: pageCount,
+            };
           }
         }
         return null;
-      })
-      .filter(Boolean);
+      }).filter(item => item !== null);
 
-    if (!pdfList.length) {
-      return res.status(400).json({ error: "No PDFs to merge" });
-    }
+      if (pdfData.length === 0) {
+        return res.status(400).json({ error: "No PDFs to merge" });
+      }
 
-    // Download PDFs
-    const pdfBuffers = await Promise.all(
-      pdfList.map(async ({ PDFUrl }) => {
-        if (!PDFUrl)
-          throw new Error("PDFUrl is undefined for one of the illustrations");
-        const resp = await axios.get(PDFUrl, { responseType: "arraybuffer" });
-        if (resp.status !== 200)
-          throw new Error(`Failed to fetch PDF: ${PDFUrl}`);
-        return Buffer.from(resp.data);
-      })
-    );
-
-    // Merge PDFs
-    const mergedPdf = await PDFDocument.create();
-    for (let i = 0; i < pdfList.length; i++) {
-      const { PageCount } = pdfList[i];
-      const pdfDoc = await PDFDocument.load(pdfBuffers[i]);
-      const totalPages = pdfDoc.getPageCount();
-      const pagesToCopy = Array.from(
-        { length: Math.min(PageCount, totalPages) },
-        (_, idx) => idx
+      // Fetch all PDF array buffers (like frontend fetch logic)
+      const pdfBytesArray = await Promise.all(
+        pdfData.map(async ({ PDFUrl }) => {
+          const response = await axios.get(PDFUrl, { responseType: "arraybuffer" });
+          if (response.status !== 200) {
+            throw new Error(`Failed to fetch ${PDFUrl}`);
+          }
+          return response.data;
+        })
       );
-      const copiedPages = await mergedPdf.copyPages(pdfDoc, pagesToCopy);
-      copiedPages.forEach((page) => mergedPdf.addPage(page));
+
+      // Load PDF documents
+      const pdfDocs = await Promise.all(pdfBytesArray.map((bytes) => {
+        return PDFDocument.load(bytes);
+      }));
+
+      // Create merged PDF exactly like frontend logic
+      const mergedPdf = await PDFDocument.create();
+      
+      for (let i = 0; i < pdfData.length; i++) {
+        const { PageCount } = pdfData[i];
+        const pdfDoc = pdfDocs[i];
+        const totalPages = pdfDoc.getPageCount();
+        const pagesToCopy = Array.from({ length: Math.min(PageCount, totalPages) }, (_, i) => i);
+        
+        const pages = await mergedPdf.copyPages(pdfDoc, pagesToCopy);
+        pages.forEach(page => mergedPdf.addPage(page));
+      }
+
+      const mergedPdfBytes = await mergedPdf.save();
+
+      // Generate filename
+      const reportTitle = responseObject.reportTitle || "Illustration";
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const fileName = `${reportTitle}_${timestamp}.pdf`;
+
+      // Set headers to open PDF in new tab
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `inline; filename=${fileName}`);
+      res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+      
+      // Send the PDF buffer
+      res.send(Buffer.from(mergedPdfBytes));
+
+      console.log("PDF successfully generated:", fileName);
+
+    } else {
+      return res.status(400).json({ error: "Invalid action. Use 'submit' or 'print'" });
     }
 
-    const finalPdfBytes = await mergedPdf.save();
-
-    // Send PDF response
-    const reportTitle = responseObject.reportTitle || "Illustration";
-    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-    const fileName = `${reportTitle}_${timestamp}.pdf`;
-
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename=${fileName}`);
-    res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
-    res.send(Buffer.from(finalPdfBytes));
-
-    console.log("PDF successfully generated and sent:", fileName);
-  } catch (err) {
-    console.error("Submit & merge failed:", err);
-    res.status(500).json({ error: "Failed to process request" });
+  } catch (error) {
+    console.error('Process records failed:', error);
+    res.status(500).json({ error: "Process failed", details: error.message });
   }
 };
