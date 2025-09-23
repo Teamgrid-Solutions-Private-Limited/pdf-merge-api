@@ -18,8 +18,9 @@ app.use(morgan("dev"));
 const DB = require("./db/conn");
 
 const indexRoutes = require("./routes/index");
+const pdfRoutes = require("./routes/pdfRoutes");
 app.use("/api", indexRoutes);
-app.use("/api/pdf", require("./controllers/pdfController"));
+app.use("/api/pdf", pdfRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
