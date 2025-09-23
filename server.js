@@ -20,7 +20,7 @@ app.use(morgan("dev"));
 const indexRoutes = require("./routes/index");
 const pdfRoutes = require("./routes/pdfRoutes");
 app.use("/api", indexRoutes);
-app.use("/api/pdf", pdfRoutes);
+app.use("/api/v1", pdfRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
