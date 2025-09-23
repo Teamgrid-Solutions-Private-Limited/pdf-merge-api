@@ -6,7 +6,7 @@ const { PDFDocument } = require("pdf-lib");
       "x-tenant-name": "life-innovators",
       "x-synthetic-key": "da13cd4d-23ad-4987-8fac-037a3530d338",
     };
-    const request_meta = {  compiler_type: process.env.API_TYPE_CAL };
+    const request_meta = {  compiler_type: "Neuron" };
   request_meta.xreport_options = {"multiple_docs": true, "page_numbers": false};
 const processRecordsHandler = (urlFromEnv) => async (req, res) => {
   try {
