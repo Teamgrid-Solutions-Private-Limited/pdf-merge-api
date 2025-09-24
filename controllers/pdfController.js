@@ -3,8 +3,8 @@ const { PDFDocument } = require("pdf-lib");
 
 const headers = {
   "Content-Type": "application/json",
-  "x-tenant-name": "life-innovators",
-  "x-synthetic-key": "da13cd4d-23ad-4987-8fac-037a3530d338",
+  "x-tenant-name": process.env.TENANT_NAME,
+  "x-synthetic-key": process.env.API_KEY,
 };
 const request_meta = { compiler_type: "Neuron" };
 request_meta.xreport_options = { multiple_docs: true, page_numbers: false };
