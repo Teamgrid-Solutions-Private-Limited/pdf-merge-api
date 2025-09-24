@@ -5,12 +5,12 @@ const router = express.Router();
 
 router.get('/DemoMYGA', (req, res) => {
   res.json({
-    message: "This is the DemoMYGA API endpoint. Use POST requests to interact."
+    message: "Error 405: Method Not Allowed. Use POST requests to interact."
   });
 });
 router.get('/DemoFIA', (req, res) => {
   res.json({
-    message: "This is the DemoFIA API endpoint. Use POST requests to interact."
+    message: "Error 405: Method Not Allowed. Use POST requests to interact."
   });
 });
 router.post(
