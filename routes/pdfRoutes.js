@@ -3,12 +3,7 @@ const { processRecordsHandler } = require("../controllers/pdfController");
 const protectedKey = require("../utils/protectedKey");
 const router = express.Router();
 
-router.get('/DemoMYGA', (req, res) => {
-  res.json({
-    message: "Error 405: Method Not Allowed. Use POST requests to interact."
-  });
-});
-router.get('/DemoFIA', (req, res) => {
+router.get(['/DemoMYGA', '/DemoFIA'], (req, res) => {
   res.json({
     message: "Error 405: Method Not Allowed. Use POST requests to interact."
   });
