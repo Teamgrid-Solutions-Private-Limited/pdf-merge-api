@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.get(['/DemoMYGA', '/DemoFIA'], (req, res) => {
   res.json({
-    message: "Error 405: Method Not Allowed. Use POST requests to interact."
+    "Error 405": "Method Not Allowed. Use POST requests to interact.",
   });
 });
 router.post(
