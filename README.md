@@ -104,7 +104,7 @@ if (response.ok) {
 ```javascript
 const handleGeneratePDF = async (formData) => {
   try {
-    const response = await fetch('/api/DemoMYGA', {
+    const response = await fetch('your-api-url/api/v1/DemoMYGA', {
       method: 'POST',
       headers: {
         'x-protected-key': `${process.env.REACT_APP_PROTECTED_KEY}`,
