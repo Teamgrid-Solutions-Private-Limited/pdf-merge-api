@@ -23,4 +23,6 @@ jobs:
             cd /var/www/demos.godigitalalchemy.com/html/illustrata
             cd pdf-merge-api
             git pull origin main
-            #npm install
+            pm2 stop middleware-api
+            pm2 start middleware-api --watch
+            pm2 save
