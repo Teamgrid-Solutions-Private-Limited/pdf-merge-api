@@ -21,7 +21,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /var/www/demos.godigitalalchemy.com/html/illustrata
-            cd pdf-merge-api
+            cd api/pdf-merge-api
             git pull origin main
             pm2 stop middleware-api
             pm2 start middleware-api --watch
