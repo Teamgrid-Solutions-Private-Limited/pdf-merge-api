@@ -16,8 +16,8 @@ app.use(morgan("dev"));
 
 const indexRoutes = require("./routes/index");
 const pdfRoutes = require("./routes/pdfRoutes");
-app.use("/api", indexRoutes);
-app.use("/api/v1", pdfRoutes);
+app.use("/", indexRoutes);
+app.use("/v1", pdfRoutes);
 
 app.listen(port, () => {
   console.log(`Server is running on port: ${port}`);
